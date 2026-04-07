@@ -1,13 +1,15 @@
 import Flutter
 import UIKit
 
-class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
+class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarControllerDelegate {
     private let channel: FlutterMethodChannel
     private let container: UIView
-    private var tabBar: UITabBar?
+    private var tabBarController: UITabBarController?
+    private var tabBar: UITabBar? { tabBarController?.tabBar }
     private var minimizeBehavior: Int = 3 // automatic
     private var currentLabels: [String] = []
     private var currentSymbols: [String] = []
+    private var currentSelectedSymbols: [String] = []
     private var currentSearchFlags: [Bool] = []
     private var currentBadgeCounts: [Int?] = []
 
@@ -20,6 +22,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
 
         var labels: [String] = []
         var symbols: [String] = []
+        var selectedSymbols: [String] = []
         var searchFlags: [Bool] = []
         var badgeCounts: [Int?] = []
         var spacerFlags: [Bool] = []
@@ -33,8 +36,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
 
         if let dict = args as? [String: Any] {
             NSLog("📦 TabBar init dict keys: \(dict.keys)")
+            NSLog("📦 selectedSfSymbols: \(dict["selectedSfSymbols"] ?? "NOT FOUND")")
             labels = (dict["labels"] as? [String]) ?? []
             symbols = (dict["sfSymbols"] as? [String]) ?? []
+            selectedSymbols = (dict["selectedSfSymbols"] as? [String]) ?? []
             searchFlags = (dict["searchFlags"] as? [Bool]) ?? []
             spacerFlags = (dict["spacerFlags"] as? [Bool]) ?? []
             if let badgeData = dict["badgeCounts"] as? [NSNumber?] {
@@ -51,6 +56,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
             if let m = dict["minimizeBehavior"] as? NSNumber { minimize = m.intValue }
         }
 
+        self.currentLabels = labels
+        self.currentSymbols = symbols
+        self.currentSelectedSymbols = selectedSymbols
+
         super.init()
 
         container.backgroundColor = .clear
@@ -59,20 +68,21 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
         }
 
 
-        // Create single tab bar
-        let bar = UITabBar(frame: .zero)
-        tabBar = bar
-        bar.delegate = self
-        bar.translatesAutoresizingMaskIntoConstraints = false
+        // Use UITabBarController for proper iOS 26 Liquid Glass rendering
+        let tbc = UITabBarController()
+        tabBarController = tbc
+        tbc.delegate = self
+        tbc.view.translatesAutoresizingMaskIntoConstraints = false
+        let bar = tbc.tabBar
 
-        // iOS 26+ special handling - Skip appearance, use direct properties only
+        // iOS 26+ — native Liquid Glass with default material
         if #available(iOS 26.0, *) {
-            // For iOS 26, we skip UITabBarAppearance as it interferes with custom colors
             bar.isTranslucent = true
-            bar.backgroundImage = UIImage()
-            bar.shadowImage = UIImage()
-            bar.backgroundColor = .clear
-            NSLog("📱 iOS 26+ detected - using direct properties only")
+            let appearance = UITabBarAppearance()
+            appearance.configureWithDefaultBackground()
+            bar.standardAppearance = appearance
+            bar.scrollEdgeAppearance = appearance
+            NSLog("📱 iOS 26+ detected - UITabBarController with default appearance")
         }
         // iOS 13-25 - Use appearance
         else if #available(iOS 13.0, *) {
@@ -159,25 +169,21 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                     var selectedImage: UIImage? = nil
 
                     if i < symbols.count && !symbols[i].isEmpty {
-                        // iOS 26+: Use different rendering modes for selected/unselected
+                        let selSymbol = (i < selectedSymbols.count && !selectedSymbols[i].isEmpty) ? selectedSymbols[i] : symbols[i]
+                        NSLog("🔵 Tab \(i): icon=\(symbols[i]), selectedIcon=\(selSymbol)")
+
                         if #available(iOS 26.0, *) {
-                            // Unselected: Only apply custom color if unselectedTint is provided
                             if let unselTint = unselectedTint {
-                                // Create colored image for unselected state
-                                if let originalImage = UIImage(systemName: symbols[i]) {
+                                if let originalImage = Self.loadIcon(symbols[i], renderingMode: .alwaysOriginal) {
                                     image = originalImage.withTintColor(unselTint, renderingMode: .alwaysOriginal)
                                 }
                             } else {
-                                // No custom color - use template mode to respect theme
-                                image = UIImage(systemName: symbols[i])?.withRenderingMode(.alwaysTemplate)
+                                image = Self.loadIcon(symbols[i])
                             }
-
-                            // Selected: Use template rendering so tintColor applies
-                            selectedImage = UIImage(systemName: symbols[i])?.withRenderingMode(.alwaysTemplate)
+                            selectedImage = Self.loadIcon(selSymbol)
                         } else {
-                            // iOS <26: Use default behavior
-                            image = UIImage(systemName: symbols[i])
-                            selectedImage = image
+                            image = Self.loadIcon(symbols[i])
+                            selectedImage = Self.loadIcon(selSymbol)
                         }
                     }
 
@@ -199,23 +205,34 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
         }
 
         let count = max(labels.count, symbols.count)
-        bar.items = buildItems(0..<count)
+        let tabItems = buildItems(0..<count)
 
-        // Note: spacerFlags are received but not yet implemented for UITabBar
-        // UITabBar doesn't natively support flexible spacing between items like UIToolbar does
-        // This would require custom UITabBar subclass or different approach
-        // TODO: Implement grouped tab bar layout if needed
+        // UITabBarController needs viewControllers — create empty VCs with tab bar items
+        var viewControllers: [UIViewController] = []
+        for item in tabItems {
+            let vc = UIViewController()
+            vc.tabBarItem = item
+            vc.view.backgroundColor = .clear
+            viewControllers.append(vc)
+        }
+        tbc.viewControllers = viewControllers
 
-        if selectedIndex >= 0, let items = bar.items, selectedIndex < items.count {
-            bar.selectedItem = items[selectedIndex]
+        if selectedIndex >= 0 && selectedIndex < viewControllers.count {
+            tbc.selectedIndex = selectedIndex
         }
 
-        container.addSubview(bar)
+        // Only show tab bar, hide VC content area
+        tbc.view.backgroundColor = .clear
+        for vc in viewControllers {
+            vc.view.isHidden = true
+        }
+
+        container.addSubview(tbc.view)
         NSLayoutConstraint.activate([
-            bar.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            bar.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            bar.topAnchor.constraint(equalTo: container.topAnchor),
-            bar.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            tbc.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            tbc.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            tbc.view.topAnchor.constraint(equalTo: container.topAnchor),
+            tbc.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
         self.minimizeBehavior = minimize
@@ -264,15 +281,17 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                 return
             }
 
+            let selectedSymbols = (args["selectedSfSymbols"] as? [String]) ?? []
             let searchFlags = (args["searchFlags"] as? [Bool]) ?? []
             let selectedIndex = (args["selectedIndex"] as? NSNumber)?.intValue ?? 0
             var badgeCounts: [Int?] = []
             if let badgeData = args["badgeCounts"] as? [NSNumber?] {
                 badgeCounts = badgeData.map { $0?.intValue }
             }
-            
+
             self.currentLabels = labels
             self.currentSymbols = symbols
+            self.currentSelectedSymbols = selectedSymbols
             self.currentSearchFlags = searchFlags
             self.currentBadgeCounts = badgeCounts
 
@@ -306,27 +325,21 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                         var selectedImage: UIImage? = nil
 
                         if i < symbols.count && !symbols[i].isEmpty {
-                            // iOS 26+: Use different rendering modes for selected/unselected
-                            if #available(iOS 26.0, *) {
-                                // Get current unselected color from tab bar
-                                let unselTint = self.tabBar?.unselectedItemTintColor
+                            let selSymbol = (i < selectedSymbols.count && !selectedSymbols[i].isEmpty) ? selectedSymbols[i] : symbols[i]
 
-                                // Unselected: Only apply custom color if unselectedTint is set
+                            if #available(iOS 26.0, *) {
+                                let unselTint = self.tabBar?.unselectedItemTintColor
                                 if let unselTint = unselTint {
-                                    if let originalImage = UIImage(systemName: symbols[i]) {
+                                    if let originalImage = Self.loadIcon(symbols[i], renderingMode: .alwaysOriginal) {
                                         image = originalImage.withTintColor(unselTint, renderingMode: .alwaysOriginal)
                                     }
                                 } else {
-                                    // No custom color - use template mode to respect theme
-                                    image = UIImage(systemName: symbols[i])?.withRenderingMode(.alwaysTemplate)
+                                    image = Self.loadIcon(symbols[i])
                                 }
-
-                                // Selected: Use template rendering so tintColor applies
-                                selectedImage = UIImage(systemName: symbols[i])?.withRenderingMode(.alwaysTemplate)
+                                selectedImage = Self.loadIcon(selSymbol)
                             } else {
-                                // iOS <26: Use default behavior
-                                image = UIImage(systemName: symbols[i])
-                                selectedImage = image
+                                image = Self.loadIcon(symbols[i])
+                                selectedImage = Self.loadIcon(selSymbol)
                             }
                         }
 
@@ -347,10 +360,19 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                 return items
             }
 
-            if let bar = self.tabBar {
-                bar.items = buildItems(0..<count)
-                if let items = bar.items, selectedIndex >= 0, selectedIndex < items.count {
-                    bar.selectedItem = items[selectedIndex]
+            if let tbc = self.tabBarController {
+                let tabItems = buildItems(0..<count)
+                var viewControllers: [UIViewController] = []
+                for item in tabItems {
+                    let vc = UIViewController()
+                    vc.tabBarItem = item
+                    vc.view.backgroundColor = .clear
+                    vc.view.isHidden = true
+                    viewControllers.append(vc)
+                }
+                tbc.viewControllers = viewControllers
+                if selectedIndex >= 0 && selectedIndex < viewControllers.count {
+                    tbc.selectedIndex = selectedIndex
                 }
             }
             result(nil)
@@ -362,8 +384,8 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                 return
             }
 
-            if let bar = self.tabBar, let items = bar.items, idx >= 0, idx < items.count {
-                bar.selectedItem = items[idx]
+            if let tbc = self.tabBarController, let vcs = tbc.viewControllers, idx >= 0, idx < vcs.count {
+                tbc.selectedIndex = idx
             }
             result(nil)
 
@@ -483,21 +505,20 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                 var selectedImage: UIImage? = nil
 
                 if i < currentSymbols.count && !currentSymbols[i].isEmpty {
+                    let selSymbol = (i < currentSelectedSymbols.count && !currentSelectedSymbols[i].isEmpty) ? currentSelectedSymbols[i] : currentSymbols[i]
+
                     if #available(iOS 26.0, *) {
-                        // Unselected: Only apply custom color if unselectedTint is set
                         if let unselTint = unselTint {
-                            if let originalImage = UIImage(systemName: currentSymbols[i]) {
+                            if let originalImage = Self.loadIcon(currentSymbols[i], renderingMode: .alwaysOriginal) {
                                 image = originalImage.withTintColor(unselTint, renderingMode: .alwaysOriginal)
                             }
                         } else {
-                            // No custom color - use template mode to respect theme
-                            image = UIImage(systemName: currentSymbols[i])?.withRenderingMode(.alwaysTemplate)
+                            image = Self.loadIcon(currentSymbols[i])
                         }
-                        // Selected: Use template rendering so tintColor applies
-                        selectedImage = UIImage(systemName: currentSymbols[i])?.withRenderingMode(.alwaysTemplate)
+                        selectedImage = Self.loadIcon(selSymbol)
                     } else {
-                        image = UIImage(systemName: currentSymbols[i])
-                        selectedImage = image
+                        image = Self.loadIcon(currentSymbols[i])
+                        selectedImage = Self.loadIcon(selSymbol)
                     }
                 }
 
@@ -513,16 +534,42 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
             items.append(item)
         }
 
-        bar.items = items
-        if currentSelectedIndex < items.count {
-            bar.selectedItem = items[currentSelectedIndex]
+        if let tbc = self.tabBarController {
+            var viewControllers: [UIViewController] = []
+            for item in items {
+                let vc = UIViewController()
+                vc.tabBarItem = item
+                vc.view.backgroundColor = .clear
+                vc.view.isHidden = true
+                viewControllers.append(vc)
+            }
+            tbc.viewControllers = viewControllers
+            if currentSelectedIndex < viewControllers.count {
+                tbc.selectedIndex = currentSelectedIndex
+            }
         }
+    }
+
+    /// SF Symbol veya custom asset'ten UIImage yükler.
+    /// "house.fill" gibi SF Symbol isimleri → UIImage(systemName:)
+    /// "tab_home_active" gibi asset isimleri → UIImage(named:)
+    private static func loadIcon(_ name: String, renderingMode: UIImage.RenderingMode = .alwaysTemplate) -> UIImage? {
+        // Önce SF Symbol dene
+        if let sfImage = UIImage(systemName: name) {
+            return sfImage.withRenderingMode(renderingMode)
+        }
+        // SF Symbol bulunamazsa asset'ten yükle
+        if let assetImage = UIImage(named: name) {
+            return assetImage.withRenderingMode(renderingMode)
+        }
+        NSLog("⚠️ Icon not found: \(name)")
+        return nil
     }
 
     func view() -> UIView { container }
 
-    func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
-        if let bar = self.tabBar, bar === tabBar, let items = bar.items, let idx = items.firstIndex(of: item) {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        if let idx = tabBarController.viewControllers?.firstIndex(of: viewController) {
             channel.invokeMethod("valueChanged", arguments: ["index": idx])
         }
     }
