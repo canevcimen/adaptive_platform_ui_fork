@@ -265,6 +265,22 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
 
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+        case "setInteractionEnabled":
+            // Enable/disable touch handling on the native tab bar without
+            // hiding it. Used by the Flutter side to stop UITabBar from
+            // eating touches (and briefly drawing its "pressed" highlight)
+            // while a Flutter-side modal bottom sheet / dialog is open.
+            //
+            // Purely disables touch — the bar remains visible and keeps its
+            // current state. Re-enable after the modal dismisses.
+            if let args = call.arguments as? [String: Any],
+               let enabled = (args["enabled"] as? NSNumber)?.boolValue {
+                self.container.isUserInteractionEnabled = enabled
+                result(nil)
+            } else {
+                result(FlutterError(code: "bad_args", message: "Missing enabled flag", details: nil))
+            }
+
         case "getIntrinsicSize":
             if let bar = self.tabBar {
                 let size = bar.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))

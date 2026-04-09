@@ -385,6 +385,18 @@ class iOS26ButtonView: NSObject, FlutterPlatformView {
             }
             result(nil)
 
+        case "setInteractionEnabled":
+            // Disable touch handling on the native UIButton without hiding
+            // it. Used by the Flutter side to stop the button from eating
+            // touches (and briefly drawing its press highlight) while a
+            // Flutter modal is on top of the navigator.
+            if let args = call.arguments as? [String: Any],
+               let enabled = (args["enabled"] as? NSNumber)?.boolValue {
+                self.button.isUserInteractionEnabled = enabled
+                self._view.isUserInteractionEnabled = enabled
+            }
+            result(nil)
+
         case "setBrightness":
             if let args = call.arguments as? [String: Any],
                let dark = args["isDark"] as? Bool {

@@ -18,6 +18,7 @@ class IOS26NativeTabBar extends StatefulWidget {
     this.height,
     this.minimizeBehavior = TabBarMinimizeBehavior.automatic,
     this.showNativeView = true,
+    this.interactionEnabled = true,
   });
 
   final List<AdaptiveNavigationDestination> destinations;
@@ -28,6 +29,17 @@ class IOS26NativeTabBar extends StatefulWidget {
   final Color? backgroundColor;
   final double? height;
   final bool showNativeView;
+
+  /// When `false`, the native `UITabBar` stops receiving touch events and
+  /// will no longer draw its "pressed" highlight. Used by callers that show
+  /// a Flutter-side modal above the tab bar: UIKit would otherwise capture
+  /// the first `touchesBegan` underneath the modal and briefly render the
+  /// button-press state, which bleeds through the Liquid Glass material.
+  ///
+  /// The bar remains visible and its currently-selected tab / appearance
+  /// state is untouched; only `isUserInteractionEnabled` is flipped, so
+  /// there is zero dispose / re-attach cost when toggled.
+  final bool interactionEnabled;
 
   /// Tab bar minimize behavior (iOS 26+)
   /// Controls how the tab bar minimizes when scrolling
@@ -44,6 +56,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
   int? _lastUnselectedTint;
   int? _lastBg;
   bool? _lastIsDark;
+  bool? _lastInteractionEnabled;
   double? _intrinsicHeight;
   List<String>? _lastLabels;
   List<String>? _lastSymbols;
@@ -200,6 +213,16 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         : null;
     _lastIsDark = _isDark;
     _lastMinimizeBehavior = widget.minimizeBehavior;
+    _lastInteractionEnabled = widget.interactionEnabled;
+    if (!widget.interactionEnabled) {
+      // Apply the initial disabled state on the native side right away so
+      // there is no frame where the tab bar could accept a touch before
+      // the first sync runs.
+      ch.invokeMethod(
+        'setInteractionEnabled',
+        {'enabled': false},
+      );
+    }
     _requestIntrinsicSize();
     _cacheItems();
   }
@@ -298,6 +321,15 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'behavior': widget.minimizeBehavior.index,
       });
       _lastMinimizeBehavior = widget.minimizeBehavior;
+    }
+
+    // Touch interaction enable/disable — used by the Flutter side to stop
+    // UITabBar from eating touches while a modal is on top.
+    if (_lastInteractionEnabled != widget.interactionEnabled) {
+      await ch.invokeMethod('setInteractionEnabled', {
+        'enabled': widget.interactionEnabled,
+      });
+      _lastInteractionEnabled = widget.interactionEnabled;
     }
   }
 

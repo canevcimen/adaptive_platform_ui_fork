@@ -69,6 +69,7 @@ class IOS26Button extends StatefulWidget {
     this.borderRadius,
     this.minSize,
     this.useSmoothRectangleBorder = true,
+    this.interactionEnabled = true,
   }) : child = null,
        isChildMode = false,
        sfSymbol = null;
@@ -87,6 +88,7 @@ class IOS26Button extends StatefulWidget {
     this.borderRadius,
     this.minSize,
     this.useSmoothRectangleBorder = true,
+    this.interactionEnabled = true,
   }) : label = '',
        textColor = null,
        isChildMode = true,
@@ -105,6 +107,7 @@ class IOS26Button extends StatefulWidget {
     this.borderRadius,
     this.minSize,
     this.useSmoothRectangleBorder = true,
+    this.interactionEnabled = true,
   }) : label = '',
        textColor = null,
        child = null,
@@ -153,6 +156,12 @@ class IOS26Button extends StatefulWidget {
   /// When false, uses perfectly circular/capsule shape
   /// Default is true for smooth rectangle, set to false for circular
   final bool useSmoothRectangleBorder;
+
+  /// When false, the underlying UIKit button stops handling touches and
+  /// drawing its press highlight. The button stays visible. Used to prevent
+  /// the native button from eating touches / flashing while a Flutter modal
+  /// is on top of the navigator.
+  final bool interactionEnabled;
 
   @override
   State<IOS26Button> createState() => _IOS26ButtonState();
@@ -230,6 +239,12 @@ class _IOS26ButtonState extends State<IOS26Button> {
     if (oldWidget.color != widget.color) {
       _channel.invokeMethod('setColor', {
         'color': widget.color != null ? _colorToHex(widget.color!) : null,
+      });
+    }
+
+    if (oldWidget.interactionEnabled != widget.interactionEnabled) {
+      _channel.invokeMethod('setInteractionEnabled', {
+        'enabled': widget.interactionEnabled,
       });
     }
 
