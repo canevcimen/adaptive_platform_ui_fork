@@ -199,10 +199,9 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     item.badgeValue = nil
                 }
 
-                // Label boş/space ise ikonu aşağı kaydır (label alanını kapat)
+                // Label boş/space ise label alanını tamamen kaldır — ikon otomatik ortalanır
                 if let t = title, t.trimmingCharacters(in: .whitespaces).isEmpty {
-                    item.imageInsets = UIEdgeInsets(top: 10, left: 0, bottom: -10, right: 0)
-                    item.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 100) // label'ı ekran dışına it
+                    item.title = nil
                 }
 
                 items.append(item)
