@@ -201,7 +201,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
 
                 // Label boş/space ise ikonu aşağı kaydır (label alanını kapat)
                 if let t = title, t.trimmingCharacters(in: .whitespaces).isEmpty {
-                    item.imageInsets = UIEdgeInsets(top: 6, left: 0, bottom: -6, right: 0)
+                    item.imageInsets = UIEdgeInsets(top: 10, left: 0, bottom: -10, right: 0)
                     item.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 100) // label'ı ekran dışına it
                 }
 
