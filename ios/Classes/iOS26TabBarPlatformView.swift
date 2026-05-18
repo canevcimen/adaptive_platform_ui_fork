@@ -13,6 +13,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
     private var currentSearchFlags: [Bool] = []
     private var currentBadgeCounts: [Int?] = []
     private var currentBadgeColors: [UIColor?] = []
+    private var currentBadgeDotFlags: [Bool] = []
 
     init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
         self.channel = FlutterMethodChannel(
@@ -27,6 +28,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
         var searchFlags: [Bool] = []
         var badgeCounts: [Int?] = []
         var badgeColors: [UIColor?] = []
+        var badgeDotFlags: [Bool] = []
         var spacerFlags: [Bool] = []
         var selectedIndex: Int = 0
         var isDark: Bool = false
@@ -50,6 +52,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             if let colorData = dict["badgeColors"] as? [NSNumber?] {
                 badgeColors = colorData.map { $0 != nil ? Self.colorFromARGB($0!.intValue) : nil }
             }
+            badgeDotFlags = (dict["badgeDotFlags"] as? [Bool]) ?? []
             if let v = dict["selectedIndex"] as? NSNumber { selectedIndex = v.intValue }
             if let v = dict["isDark"] as? NSNumber { isDark = v.boolValue }
             if let n = dict["tint"] as? NSNumber { tint = Self.colorFromARGB(n.intValue) }
@@ -154,6 +157,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                 let isSearch = (i < searchFlags.count) && searchFlags[i]
                 let badgeCount = (i < badgeCounts.count) ? badgeCounts[i] : nil
                 let badgeColor = (i < badgeColors.count) ? badgeColors[i] : nil
+                let isDot = (i < badgeDotFlags.count) && badgeDotFlags[i]
 
                 let item: UITabBarItem
 
@@ -198,8 +202,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     item.tag = i
                 }
 
-                // Set badge value if provided
-                if let count = badgeCount, count > 0 {
+                // Set badge: dot (empty string) or count
+                if isDot {
+                    item.badgeValue = ""
+                } else if let count = badgeCount, count > 0 {
                     item.badgeValue = count > 99 ? "99+" : String(count)
                 } else {
                     item.badgeValue = nil
@@ -257,6 +263,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
         self.currentSearchFlags = searchFlags
         self.currentBadgeCounts = badgeCounts
         self.currentBadgeColors = badgeColors
+        self.currentBadgeDotFlags = badgeDotFlags
 
         // Apply minimize behavior if available
         self.applyMinimizeBehavior()
@@ -331,6 +338,8 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             self.currentSelectedSymbols = selectedSymbols
             self.currentSearchFlags = searchFlags
             self.currentBadgeCounts = badgeCounts
+            var badgeDotFlags: [Bool] = (args["badgeDotFlags"] as? [Bool]) ?? []
+            self.currentBadgeDotFlags = badgeDotFlags
 
             let count = max(labels.count, symbols.count)
 
@@ -342,6 +351,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     let isSearch = (i < searchFlags.count) && searchFlags[i]
                     let badgeCount = (i < badgeCounts.count) ? badgeCounts[i] : nil
                     let badgeColor = (i < badgeColors.count) ? badgeColors[i] : nil
+                    let isDot = (i < badgeDotFlags.count) && badgeDotFlags[i]
 
                     let item: UITabBarItem
 
@@ -386,8 +396,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                         item.tag = i
                     }
 
-                    // Set badge value if provided
-                    if let count = badgeCount, count > 0 {
+                    // Set badge: dot or count
+                    if isDot {
+                        item.badgeValue = ""
+                    } else if let count = badgeCount, count > 0 {
                         item.badgeValue = count > 99 ? "99+" : String(count)
                     } else {
                         item.badgeValue = nil
@@ -503,16 +515,23 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             if let colorData = args["badgeColors"] as? [NSNumber?] {
                 badgeColors = colorData.map { $0 != nil ? Self.colorFromARGB($0!.intValue) : nil }
             }
+            let badgeDotFlags: [Bool] = (args["badgeDotFlags"] as? [Bool]) ?? []
+            self.currentBadgeDotFlags = badgeDotFlags
 
             // Update existing tab bar items with new badge values
             if let bar = self.tabBar, let items = bar.items {
                 for (index, item) in items.enumerated() {
                     if index < badgeCounts.count {
-                        let count = badgeCounts[index]
-                        if let count = count, count > 0 {
-                            item.badgeValue = count > 99 ? "99+" : String(count)
+                        let isDot = (index < badgeDotFlags.count) && badgeDotFlags[index]
+                        if isDot {
+                            item.badgeValue = ""
                         } else {
-                            item.badgeValue = nil
+                            let count = badgeCounts[index]
+                            if let count = count, count > 0 {
+                                item.badgeValue = count > 99 ? "99+" : String(count)
+                            } else {
+                                item.badgeValue = nil
+                            }
                         }
                         if index < badgeColors.count, let color = badgeColors[index] {
                             item.badgeColor = color
@@ -541,6 +560,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             let isSearch = (i < currentSearchFlags.count) && currentSearchFlags[i]
             let badgeCount = (i < currentBadgeCounts.count) ? currentBadgeCounts[i] : nil
             let badgeColor = (i < currentBadgeColors.count) ? currentBadgeColors[i] : nil
+            let isDot = (i < currentBadgeDotFlags.count) && currentBadgeDotFlags[i]
 
             let item: UITabBarItem
 
@@ -578,8 +598,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                 item.tag = i
             }
 
-            // Set badge value if provided
-            if let count = badgeCount, count > 0 {
+            // Set badge: dot or count
+            if isDot {
+                item.badgeValue = ""
+            } else if let count = badgeCount, count > 0 {
                 item.badgeValue = count > 99 ? "99+" : String(count)
             }
 

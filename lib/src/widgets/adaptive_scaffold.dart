@@ -18,6 +18,7 @@ class AdaptiveNavigationDestination {
     this.isSearch = false,
     this.badgeCount,
     this.badgeColor,
+    this.showBadgeDot = false,
     this.addSpacerAfter = false,
   });
 
@@ -43,6 +44,11 @@ class AdaptiveNavigationDestination {
   /// When null, the native default (red) is used.
   /// Accepts a Flutter [Color] value.
   final Color? badgeColor;
+
+  /// Show a small dot badge without any number (iOS 26+ only).
+  /// Uses native UITabBarItem.badgeValue = "" to render a numberless dot.
+  /// [badgeColor] applies to this dot as well.
+  final bool showBadgeDot;
 
   /// Add flexible space after this tab item (iOS 26+ only)
   /// Useful for creating grouped tabs (e.g., left group and right group)

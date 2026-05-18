@@ -61,6 +61,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
   List<String>? _lastLabels;
   List<String>? _lastSymbols;
   List<int?>? _lastBadgeCounts;
+  String? _lastDotFlags;
   TabBarMinimizeBehavior? _lastMinimizeBehavior;
 
   bool get _isDark =>
@@ -124,6 +125,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
       final badgeColors = widget.destinations
           .map((e) => e.badgeColor != null ? _colorToARGB(e.badgeColor!) : null)
           .toList();
+      final badgeDotFlags = widget.destinations.map((e) => e.showBadgeDot).toList();
       final spacerFlags = widget.destinations
           .map((e) => e.addSpacerAfter)
           .toList();
@@ -135,6 +137,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'badgeColors': badgeColors,
+        'badgeDotFlags': badgeDotFlags,
         'spacerFlags': spacerFlags,
         'selectedIndex': widget.selectedIndex,
         'isDark': _isDark,
@@ -295,6 +298,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     final badgeColors = widget.destinations
         .map((e) => e.badgeColor != null ? _colorToARGB(e.badgeColor!) : null)
         .toList();
+    final badgeDotFlags = widget.destinations.map((e) => e.showBadgeDot).toList();
 
     if (_lastLabels?.join('|') != labels.join('|') ||
         _lastSymbols?.join('|') != symbols.join('|')) {
@@ -305,6 +309,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'badgeColors': badgeColors,
+        'badgeDotFlags': badgeDotFlags,
         'selectedIndex': widget.selectedIndex,
       });
       _lastLabels = labels;
@@ -316,12 +321,16 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     final currentBadgeCounts = widget.destinations
         .map((e) => e.badgeCount)
         .toList();
-    if (_lastBadgeCounts?.join('|') != currentBadgeCounts.join('|')) {
+    final currentDotFlags = badgeDotFlags.join('|');
+    if (_lastBadgeCounts?.join('|') != currentBadgeCounts.join('|') ||
+        _lastDotFlags != currentDotFlags) {
       await ch.invokeMethod('setBadgeCounts', {
         'badgeCounts': currentBadgeCounts,
         'badgeColors': badgeColors,
+        'badgeDotFlags': badgeDotFlags,
       });
       _lastBadgeCounts = currentBadgeCounts;
+      _lastDotFlags = currentDotFlags;
     }
 
     // Minimize behavior update
