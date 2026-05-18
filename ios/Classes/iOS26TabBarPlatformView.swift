@@ -193,7 +193,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                 let isSearch = (i < searchFlags.count) && searchFlags[i]
                 let badgeCount = (i < badgeCounts.count) ? badgeCounts[i] : nil
                 let badgeColor = (i < badgeColors.count) ? badgeColors[i] : nil
-                let isDot = (i < badgeDotFlags.count) && badgeDotFlags[i]
+                let isDot = ((i < badgeDotFlags.count) && badgeDotFlags[i]) || badgeCount == 0
 
                 let item: UITabBarItem
 
@@ -404,7 +404,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     let isSearch = (i < searchFlags.count) && searchFlags[i]
                     let badgeCount = (i < badgeCounts.count) ? badgeCounts[i] : nil
                     let badgeColor = (i < badgeColors.count) ? badgeColors[i] : nil
-                    let isDot = (i < badgeDotFlags.count) && badgeDotFlags[i]
+                    let isDot = ((i < badgeDotFlags.count) && badgeDotFlags[i]) || badgeCount == 0
 
                     let item: UITabBarItem
 
@@ -592,7 +592,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             if let bar = self.tabBar, let items = bar.items {
                 for (index, item) in items.enumerated() {
                     if index < badgeCounts.count {
-                        let isDot = (index < badgeDotFlags.count) && badgeDotFlags[index]
+                        let isDot = ((index < badgeDotFlags.count) && badgeDotFlags[index]) || badgeCounts[index] == 0
                         if isDot {
                             item.badgeValue = ""
                         } else {
@@ -630,7 +630,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             let isSearch = (i < currentSearchFlags.count) && currentSearchFlags[i]
             let badgeCount = (i < currentBadgeCounts.count) ? currentBadgeCounts[i] : nil
             let badgeColor = (i < currentBadgeColors.count) ? currentBadgeColors[i] : nil
-            let isDot = (i < currentBadgeDotFlags.count) && currentBadgeDotFlags[i]
+            let isDot = ((i < currentBadgeDotFlags.count) && currentBadgeDotFlags[i]) || badgeCount == 0
 
             let item: UITabBarItem
 
