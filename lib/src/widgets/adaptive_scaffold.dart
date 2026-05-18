@@ -17,6 +17,7 @@ class AdaptiveNavigationDestination {
     this.selectedIcon,
     this.isSearch = false,
     this.badgeCount,
+    this.badgeColor,
     this.addSpacerAfter = false,
   });
 
@@ -37,6 +38,11 @@ class AdaptiveNavigationDestination {
   /// On iOS 26+: Uses native UITabBarItem.badgeValue
   /// On iOS <26 and Android: Uses AdaptiveBadge widget
   final int? badgeCount;
+
+  /// Custom badge background color (iOS 26+ only).
+  /// When null, the native default (red) is used.
+  /// Accepts a Flutter [Color] value.
+  final Color? badgeColor;
 
   /// Add flexible space after this tab item (iOS 26+ only)
   /// Useful for creating grouped tabs (e.g., left group and right group)

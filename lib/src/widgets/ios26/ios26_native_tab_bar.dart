@@ -121,6 +121,9 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
 
       final searchFlags = widget.destinations.map((e) => e.isSearch).toList();
       final badgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
+      final badgeColors = widget.destinations
+          .map((e) => e.badgeColor != null ? _colorToARGB(e.badgeColor!) : null)
+          .toList();
       final spacerFlags = widget.destinations
           .map((e) => e.addSpacerAfter)
           .toList();
@@ -131,6 +134,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'selectedSfSymbols': selectedSymbols,
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
+        'badgeColors': badgeColors,
         'spacerFlags': spacerFlags,
         'selectedIndex': widget.selectedIndex,
         'isDark': _isDark,
@@ -288,6 +292,9 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     }).toList();
     final searchFlags = widget.destinations.map((e) => e.isSearch).toList();
     final badgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
+    final badgeColors = widget.destinations
+        .map((e) => e.badgeColor != null ? _colorToARGB(e.badgeColor!) : null)
+        .toList();
 
     if (_lastLabels?.join('|') != labels.join('|') ||
         _lastSymbols?.join('|') != symbols.join('|')) {
@@ -297,6 +304,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'selectedSfSymbols': selectedSymbols,
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
+        'badgeColors': badgeColors,
         'selectedIndex': widget.selectedIndex,
       });
       _lastLabels = labels;
@@ -311,6 +319,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     if (_lastBadgeCounts?.join('|') != currentBadgeCounts.join('|')) {
       await ch.invokeMethod('setBadgeCounts', {
         'badgeCounts': currentBadgeCounts,
+        'badgeColors': badgeColors,
       });
       _lastBadgeCounts = currentBadgeCounts;
     }
