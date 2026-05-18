@@ -95,15 +95,18 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             let appearance = UITabBarAppearance()
             appearance.configureWithDefaultBackground()
 
-            // Badge rengi appearance seviyesinde (item.badgeColor iOS 26'da ignore ediliyor)
-            if let bc = globalBadgeColor {
-                let layouts: [WritableKeyPath<UITabBarAppearance, UITabBarItemAppearance>] = [
-                    \.stackedLayoutAppearance, \.inlineLayoutAppearance, \.compactInlineLayoutAppearance
-                ]
-                for kp in layouts {
+            // Badge rengi + pozisyon appearance seviyesinde
+            let layouts: [WritableKeyPath<UITabBarAppearance, UITabBarItemAppearance>] = [
+                \.stackedLayoutAppearance, \.inlineLayoutAppearance, \.compactInlineLayoutAppearance
+            ]
+            for kp in layouts {
+                if let bc = globalBadgeColor {
                     appearance[keyPath: kp].normal.badgeBackgroundColor = bc
                     appearance[keyPath: kp].selected.badgeBackgroundColor = bc
                 }
+                // Badge'i biraz sola ve aşağı kaydır → ikonun sağ üstüne hizala
+                appearance[keyPath: kp].normal.badgePositionAdjustment = UIOffset(horizontal: -4, vertical: 4)
+                appearance[keyPath: kp].selected.badgePositionAdjustment = UIOffset(horizontal: -4, vertical: 4)
             }
 
             bar.standardAppearance = appearance
@@ -139,14 +142,18 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             appearance.compactInlineLayoutAppearance.selected.iconColor = selColor
             appearance.compactInlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selColor]
 
-            // Badge rengi
-            if let bc = globalBadgeColor {
+            // Badge rengi + pozisyon
+            do {
                 let layouts: [WritableKeyPath<UITabBarAppearance, UITabBarItemAppearance>] = [
                     \.stackedLayoutAppearance, \.inlineLayoutAppearance, \.compactInlineLayoutAppearance
                 ]
                 for kp in layouts {
-                    appearance[keyPath: kp].normal.badgeBackgroundColor = bc
-                    appearance[keyPath: kp].selected.badgeBackgroundColor = bc
+                    if let bc = globalBadgeColor {
+                        appearance[keyPath: kp].normal.badgeBackgroundColor = bc
+                        appearance[keyPath: kp].selected.badgeBackgroundColor = bc
+                    }
+                    appearance[keyPath: kp].normal.badgePositionAdjustment = UIOffset(horizontal: -4, vertical: 4)
+                    appearance[keyPath: kp].selected.badgePositionAdjustment = UIOffset(horizontal: -4, vertical: 4)
                 }
             }
 
@@ -243,6 +250,20 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                 // Badge rengi (item seviyesinde de set — iOS <26 için)
                 if let color = badgeColor {
                     item.badgeColor = color
+                }
+
+                // Dot badge'i küçült — font 1px yapınca native dot küçülür
+                if isDot {
+                    if #available(iOS 13.0, *) {
+                        item.setBadgeTextAttributes(
+                            [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 1)],
+                            for: .normal
+                        )
+                        item.setBadgeTextAttributes(
+                            [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 1)],
+                            for: .selected
+                        )
+                    }
                 }
 
                 // Label boş/space ise label alanını tamamen kaldır — ikon otomatik ortalanır
@@ -440,6 +461,20 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     // Badge rengi (item seviyesinde — iOS <26 için)
                     if let color = badgeColor {
                         item.badgeColor = color
+                    }
+
+                    // Dot badge küçült
+                    if isDot {
+                        if #available(iOS 13.0, *) {
+                            item.setBadgeTextAttributes(
+                                [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 1)],
+                                for: .normal
+                            )
+                            item.setBadgeTextAttributes(
+                                [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 1)],
+                                for: .selected
+                            )
+                        }
                     }
 
                     items.append(item)
@@ -643,6 +678,20 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             // Badge rengi
             if let color = badgeColor {
                 item.badgeColor = color
+            }
+
+            // Dot badge küçült
+            if isDot {
+                if #available(iOS 13.0, *) {
+                    item.setBadgeTextAttributes(
+                        [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 1)],
+                        for: .normal
+                    )
+                    item.setBadgeTextAttributes(
+                        [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 1)],
+                        for: .selected
+                    )
+                }
             }
 
             items.append(item)
