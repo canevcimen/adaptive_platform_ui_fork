@@ -46,11 +46,14 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             selectedSymbols = (dict["selectedSfSymbols"] as? [String]) ?? []
             searchFlags = (dict["searchFlags"] as? [Bool]) ?? []
             spacerFlags = (dict["spacerFlags"] as? [Bool]) ?? []
-            if let badgeData = dict["badgeCounts"] as? [NSNumber?] {
-                badgeCounts = badgeData.map { $0?.intValue }
+            if let badgeData = dict["badgeCounts"] as? [Any] {
+                badgeCounts = badgeData.map { ($0 as? NSNumber)?.intValue }
             }
-            if let colorData = dict["badgeColors"] as? [NSNumber?] {
-                badgeColors = colorData.map { $0 != nil ? Self.colorFromARGB($0!.intValue) : nil }
+            if let colorData = dict["badgeColors"] as? [Any] {
+                badgeColors = colorData.map { item in
+                    guard let n = item as? NSNumber else { return nil }
+                    return Self.colorFromARGB(n.intValue)
+                }
             }
             badgeDotFlags = (dict["badgeDotFlags"] as? [Bool]) ?? []
             if let v = dict["selectedIndex"] as? NSNumber { selectedIndex = v.intValue }
@@ -325,12 +328,15 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             let searchFlags = (args["searchFlags"] as? [Bool]) ?? []
             let selectedIndex = (args["selectedIndex"] as? NSNumber)?.intValue ?? 0
             var badgeCounts: [Int?] = []
-            if let badgeData = args["badgeCounts"] as? [NSNumber?] {
-                badgeCounts = badgeData.map { $0?.intValue }
+            if let badgeData = args["badgeCounts"] as? [Any] {
+                badgeCounts = badgeData.map { ($0 as? NSNumber)?.intValue }
             }
             var badgeColors: [UIColor?] = []
-            if let colorData = args["badgeColors"] as? [NSNumber?] {
-                badgeColors = colorData.map { $0 != nil ? Self.colorFromARGB($0!.intValue) : nil }
+            if let colorData = args["badgeColors"] as? [Any] {
+                badgeColors = colorData.map { item in
+                    guard let n = item as? NSNumber else { return nil }
+                    return Self.colorFromARGB(n.intValue)
+                }
             }
 
             self.currentLabels = labels
@@ -503,17 +509,20 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
 
         case "setBadgeCounts":
             guard let args = call.arguments as? [String: Any],
-                  let badgeData = args["badgeCounts"] as? [NSNumber?] else {
+                  let badgeData = args["badgeCounts"] as? [Any] else {
                 result(FlutterError(code: "bad_args", message: "Missing badge counts", details: nil))
                 return
             }
 
-            let badgeCounts = badgeData.map { $0?.intValue }
+            let badgeCounts = badgeData.map { ($0 as? NSNumber)?.intValue }
             self.currentBadgeCounts = badgeCounts
 
             var badgeColors: [UIColor?] = []
-            if let colorData = args["badgeColors"] as? [NSNumber?] {
-                badgeColors = colorData.map { $0 != nil ? Self.colorFromARGB($0!.intValue) : nil }
+            if let colorData = args["badgeColors"] as? [Any] {
+                badgeColors = colorData.map { item in
+                    guard let n = item as? NSNumber else { return nil }
+                    return Self.colorFromARGB(n.intValue)
+                }
             }
             let badgeDotFlags: [Bool] = (args["badgeDotFlags"] as? [Bool]) ?? []
             self.currentBadgeDotFlags = badgeDotFlags
