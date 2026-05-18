@@ -86,11 +86,26 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
         tbc.view.translatesAutoresizingMaskIntoConstraints = false
         let bar = tbc.tabBar
 
+        // Badge rengi: ilk non-nil badgeColor'ı kullan (appearance seviyesinde set)
+        let globalBadgeColor = badgeColors.compactMap { $0 }.first
+
         // iOS 26+ — native Liquid Glass with default material
         if #available(iOS 26.0, *) {
             bar.isTranslucent = true
             let appearance = UITabBarAppearance()
             appearance.configureWithDefaultBackground()
+
+            // Badge rengi appearance seviyesinde (item.badgeColor iOS 26'da ignore ediliyor)
+            if let bc = globalBadgeColor {
+                let layouts: [WritableKeyPath<UITabBarAppearance, UITabBarItemAppearance>] = [
+                    \.stackedLayoutAppearance, \.inlineLayoutAppearance, \.compactInlineLayoutAppearance
+                ]
+                for kp in layouts {
+                    appearance[keyPath: kp].normal.badgeBackgroundColor = bc
+                    appearance[keyPath: kp].selected.badgeBackgroundColor = bc
+                }
+            }
+
             bar.standardAppearance = appearance
             bar.scrollEdgeAppearance = appearance
             NSLog("📱 iOS 26+ detected - UITabBarController with default appearance")
@@ -123,6 +138,17 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             appearance.inlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selColor]
             appearance.compactInlineLayoutAppearance.selected.iconColor = selColor
             appearance.compactInlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selColor]
+
+            // Badge rengi
+            if let bc = globalBadgeColor {
+                let layouts: [WritableKeyPath<UITabBarAppearance, UITabBarItemAppearance>] = [
+                    \.stackedLayoutAppearance, \.inlineLayoutAppearance, \.compactInlineLayoutAppearance
+                ]
+                for kp in layouts {
+                    appearance[keyPath: kp].normal.badgeBackgroundColor = bc
+                    appearance[keyPath: kp].selected.badgeBackgroundColor = bc
+                }
+            }
 
             bar.standardAppearance = appearance
             if #available(iOS 15.0, *) {
@@ -214,9 +240,16 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     item.badgeValue = nil
                 }
 
-                // Set custom badge color if provided
+                // Badge rengi (item seviyesinde de set — iOS <26 için)
                 if let color = badgeColor {
                     item.badgeColor = color
+                }
+
+                // Badge pozisyonunu sol alta kaydır (ikonun sağ üstüne hizala)
+                if #available(iOS 13.0, *) {
+                    item.badgeTextAttributes = [
+                        .font: UIFont.systemFont(ofSize: isDot ? 1 : 11, weight: .bold)
+                    ]
                 }
 
                 // Label boş/space ise label alanını tamamen kaldır — ikon otomatik ortalanır
@@ -411,9 +444,16 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                         item.badgeValue = nil
                     }
 
-                    // Set custom badge color if provided
+                    // Badge rengi (item seviyesinde — iOS <26 için)
                     if let color = badgeColor {
                         item.badgeColor = color
+                    }
+
+                    // Dot font küçült
+                    if #available(iOS 13.0, *) {
+                        item.badgeTextAttributes = [
+                            .font: UIFont.systemFont(ofSize: isDot ? 1 : 11, weight: .bold)
+                        ]
                     }
 
                     items.append(item)
@@ -614,9 +654,16 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                 item.badgeValue = count > 99 ? "99+" : String(count)
             }
 
-            // Set custom badge color if provided
+            // Badge rengi
             if let color = badgeColor {
                 item.badgeColor = color
+            }
+
+            // Dot font küçült
+            if #available(iOS 13.0, *) {
+                item.badgeTextAttributes = [
+                    .font: UIFont.systemFont(ofSize: isDot ? 1 : 11, weight: .bold)
+                ]
             }
 
             items.append(item)
