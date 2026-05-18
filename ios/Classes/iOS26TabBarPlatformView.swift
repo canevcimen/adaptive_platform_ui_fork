@@ -245,13 +245,6 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     item.badgeColor = color
                 }
 
-                // Badge pozisyonunu sol alta kaydır (ikonun sağ üstüne hizala)
-                if #available(iOS 13.0, *) {
-                    item.badgeTextAttributes = [
-                        .font: UIFont.systemFont(ofSize: isDot ? 1 : 11, weight: .bold)
-                    ]
-                }
-
                 // Label boş/space ise label alanını tamamen kaldır — ikon otomatik ortalanır
                 if let t = title, t.trimmingCharacters(in: .whitespaces).isEmpty {
                     item.title = nil
@@ -447,13 +440,6 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
                     // Badge rengi (item seviyesinde — iOS <26 için)
                     if let color = badgeColor {
                         item.badgeColor = color
-                    }
-
-                    // Dot font küçült
-                    if #available(iOS 13.0, *) {
-                        item.badgeTextAttributes = [
-                            .font: UIFont.systemFont(ofSize: isDot ? 1 : 11, weight: .bold)
-                        ]
                     }
 
                     items.append(item)
@@ -657,13 +643,6 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarController
             // Badge rengi
             if let color = badgeColor {
                 item.badgeColor = color
-            }
-
-            // Dot font küçült
-            if #available(iOS 13.0, *) {
-                item.badgeTextAttributes = [
-                    .font: UIFont.systemFont(ofSize: isDot ? 1 : 11, weight: .bold)
-                ]
             }
 
             items.append(item)
