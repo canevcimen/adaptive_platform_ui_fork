@@ -48,6 +48,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
     private var clearGlass: Bool = false
     private var fadeBottom: Bool = false
     private var cornerRadius: CGFloat = 0
+    private var tintArgb: Int?
 
     init(
         frame: CGRect,
@@ -67,6 +68,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             useGlass = params["useGlass"] as? Bool ?? false
             clearGlass = params["clearGlass"] as? Bool ?? false
             fadeBottom = params["fadeBottom"] as? Bool ?? false
+            tintArgb = params["tintColor"] as? Int
             if let radius = params["cornerRadius"] as? Double {
                 cornerRadius = CGFloat(radius)
             }
@@ -80,6 +82,10 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             // .regular = orta seffaflik (varsayilan, panel/buton vb.).
             let glass = UIGlassEffect(style: clearGlass ? .clear : .regular)
             glass.isInteractive = true
+            // tintColor: cam'i renkli (stained glass) yapar — liquid efekt korunur.
+            if let argb = tintArgb {
+                glass.tintColor = UIColor(argb: argb)
+            }
             _blurView = FadingVisualEffectView(effect: glass)
         } else {
             let blurEffect = UIBlurEffect(style: blurStyle)

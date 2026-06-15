@@ -17,6 +17,7 @@ class AdaptiveBlurView extends StatelessWidget {
     this.glass = false,
     this.clearGlass = false,
     this.fadeBottom = false,
+    this.tintColor,
   });
 
   /// The widget to display on top of the blur effect
@@ -46,6 +47,12 @@ class AdaptiveBlurView extends StatelessWidget {
   /// iOS <26 / Android (handle the fade with a Flutter ShaderMask there).
   final bool fadeBottom;
 
+  /// Optional tint for the native `UIGlassEffect` (iOS 26+, when [glass] is true):
+  /// colors the glass (stained-glass) while keeping the liquid effect. Use a
+  /// color with alpha to control strength. No effect on iOS <26 / Android (tint
+  /// the Flutter glass there via its own settings).
+  final Color? tintColor;
+
   @override
   Widget build(BuildContext context) {
     // iOS 26+ uses native UIVisualEffectView
@@ -56,6 +63,7 @@ class AdaptiveBlurView extends StatelessWidget {
         glass: glass,
         clearGlass: clearGlass,
         fadeBottom: fadeBottom,
+        tintColor: tintColor,
         child: child,
       );
     }
@@ -296,11 +304,15 @@ class Ios26NativeBlurView extends StatefulWidget {
     this.glass = false,
     this.clearGlass = false,
     this.fadeBottom = false,
+    this.tintColor,
   });
 
   final Widget child;
   final BlurStyle blurStyle;
   final BorderRadius? borderRadius;
+
+  /// Native UIGlassEffect tint (stained glass), iOS 26+ when [glass] is true.
+  final Color? tintColor;
 
   /// True -> native UIGlassEffect (real Liquid Glass), shape via cornerConfiguration.
   final bool glass;
@@ -373,6 +385,8 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
               'useGlass': widget.glass,
               'clearGlass': widget.clearGlass,
               'fadeBottom': widget.fadeBottom,
+              if (widget.tintColor != null)
+                'tintColor': _colorToArgb(widget.tintColor!),
               'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
             },
             creationParamsCodec: const StandardMessageCodec(),
@@ -398,4 +412,12 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
       child: stack,
     );
   }
+}
+
+/// Color -> ARGB int (UIColor(argb:) ile uyumlu) — native tarafa tint gondermek icin.
+int _colorToArgb(Color c) {
+  return (((c.a * 255.0).round() & 0xFF) << 24) |
+      (((c.r * 255.0).round() & 0xFF) << 16) |
+      (((c.g * 255.0).round() & 0xFF) << 8) |
+      ((c.b * 255.0).round() & 0xFF);
 }
