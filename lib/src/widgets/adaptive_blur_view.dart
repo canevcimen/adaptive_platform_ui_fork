@@ -14,6 +14,7 @@ class AdaptiveBlurView extends StatelessWidget {
     required this.child,
     this.blurStyle = BlurStyle.systemUltraThinMaterial,
     this.borderRadius,
+    this.glass = false,
   });
 
   /// The widget to display on top of the blur effect
@@ -27,6 +28,12 @@ class AdaptiveBlurView extends StatelessWidget {
   /// Border radius for the blur view (optional)
   final BorderRadius? borderRadius;
 
+  /// When true on iOS 26+, renders the REAL Liquid Glass (`UIGlassEffect`)
+  /// instead of the classic frosted blur (`UIBlurEffect`). The rounded shape
+  /// is applied natively via `cornerConfiguration` (from [borderRadius]).
+  /// On iOS <26 / Android this flag has no effect (Flutter fallback is used).
+  final bool glass;
+
   @override
   Widget build(BuildContext context) {
     // iOS 26+ uses native UIVisualEffectView
@@ -34,6 +41,7 @@ class AdaptiveBlurView extends StatelessWidget {
       return Ios26NativeBlurView(
         blurStyle: blurStyle,
         borderRadius: borderRadius,
+        glass: glass,
         child: child,
       );
     }
@@ -271,11 +279,15 @@ class Ios26NativeBlurView extends StatefulWidget {
     required this.child,
     required this.blurStyle,
     this.borderRadius,
+    this.glass = false,
   });
 
   final Widget child;
   final BlurStyle blurStyle;
   final BorderRadius? borderRadius;
+
+  /// True -> native UIGlassEffect (real Liquid Glass), shape via cornerConfiguration.
+  final bool glass;
 
   @override
   State<Ios26NativeBlurView> createState() => Ios26NativeBlurViewState();
@@ -325,31 +337,40 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
 
   @override
   Widget build(BuildContext context) {
+    final stack = Stack(
+      children: [
+        // Native blur/glass view in background
+        Positioned.fill(
+          child: UiKitView(
+            viewType: 'adaptive_platform_ui/ios26_blur_view',
+            creationParams: {
+              'blurStyle': widget.blurStyle.toUIBlurEffectStyle(),
+              'isDark':
+                  MediaQuery.platformBrightnessOf(context) == Brightness.dark,
+              'useGlass': widget.glass,
+              'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
+            },
+            creationParamsCodec: const StandardMessageCodec(),
+            onPlatformViewCreated: (int id) {
+              _channel = MethodChannel(
+                'adaptive_platform_ui/ios26_blur_view_$id',
+              );
+            },
+          ),
+        ),
+        // Child on top
+        widget.child,
+      ],
+    );
+
+    // Glass: the native UIGlassEffect shapes itself via cornerConfiguration
+    // (including its edge lensing). A Flutter ClipRRect here would cut that
+    // edge, so skip clipping for glass and let native own the shape.
+    if (widget.glass) return stack;
+
     return ClipRRect(
       borderRadius: widget.borderRadius ?? BorderRadius.zero,
-      child: Stack(
-        children: [
-          // Native blur view in background
-          Positioned.fill(
-            child: UiKitView(
-              viewType: 'adaptive_platform_ui/ios26_blur_view',
-              creationParams: {
-                'blurStyle': widget.blurStyle.toUIBlurEffectStyle(),
-                'isDark':
-                    MediaQuery.platformBrightnessOf(context) == Brightness.dark,
-              },
-              creationParamsCodec: const StandardMessageCodec(),
-              onPlatformViewCreated: (int id) {
-                _channel = MethodChannel(
-                  'adaptive_platform_ui/ios26_blur_view_$id',
-                );
-              },
-            ),
-          ),
-          // Child on top
-          widget.child,
-        ],
-      ),
+      child: stack,
     );
   }
 }

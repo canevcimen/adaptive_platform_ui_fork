@@ -34,6 +34,8 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
     private var _channel: FlutterMethodChannel
     private var _viewId: Int64
     private var isDark: Bool = false
+    private var useGlass: Bool = false
+    private var cornerRadius: CGFloat = 0
 
     init(
         frame: CGRect,
@@ -50,13 +52,31 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
                 blurStyle = iOS26BlurViewPlatformView.parseBlurStyle(styleString)
             }
             isDark = params["isDark"] as? Bool ?? false
+            useGlass = params["useGlass"] as? Bool ?? false
+            if let radius = params["cornerRadius"] as? Double {
+                cornerRadius = CGFloat(radius)
+            }
         }
 
-        // Create blur effect and view
-        let blurEffect = UIBlurEffect(style: blurStyle)
-        _blurView = UIVisualEffectView(effect: blurEffect)
+        // Create the effect view. On iOS 26+ with useGlass, use the REAL
+        // Liquid Glass (UIGlassEffect); otherwise fall back to the classic
+        // frosted blur (UIBlurEffect), which also covers iOS < 26.
+        if useGlass, #available(iOS 26.0, *) {
+            let glass = UIGlassEffect()
+            glass.isInteractive = true
+            _blurView = UIVisualEffectView(effect: glass)
+        } else {
+            let blurEffect = UIBlurEffect(style: blurStyle)
+            _blurView = UIVisualEffectView(effect: blurEffect)
+        }
         _blurView.frame = frame
         _blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+        // Glass shape: UIGlassEffect ignores layer.cornerRadius; the rounded
+        // shape (and its edge lensing) must come from cornerConfiguration.
+        if useGlass, #available(iOS 26.0, *) {
+            _blurView.cornerConfiguration = .corners(radius: .fixed(cornerRadius))
+        }
 
         // Apply Flutter's brightness override
         if #available(iOS 13.0, *) {
@@ -84,6 +104,12 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "updateBlurStyle":
+            // Glass views keep their UIGlassEffect; blurStyle only drives the
+            // classic UIBlurEffect fallback. Don't overwrite glass with a plain blur.
+            if useGlass {
+                result(nil)
+                return
+            }
             if let args = call.arguments as? [String: Any],
                let styleString = args["blurStyle"] as? String {
                 let blurStyle = iOS26BlurViewPlatformView.parseBlurStyle(styleString)
