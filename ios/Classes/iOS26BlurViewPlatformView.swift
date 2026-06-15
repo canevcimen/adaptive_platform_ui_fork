@@ -28,14 +28,25 @@ class iOS26BlurViewFactory: NSObject, FlutterPlatformViewFactory {
     }
 }
 
+/// UIVisualEffectView whose mask layer tracks its bounds — needed so a
+/// gradient (fade) mask resizes with the view, since CALayer masks don't
+/// autoresize.
+class FadingVisualEffectView: UIVisualEffectView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        layer.mask?.frame = bounds
+    }
+}
+
 /// Native iOS 26 blur view using UIVisualEffectView
 class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
-    private var _blurView: UIVisualEffectView
+    private var _blurView: FadingVisualEffectView
     private var _channel: FlutterMethodChannel
     private var _viewId: Int64
     private var isDark: Bool = false
     private var useGlass: Bool = false
     private var clearGlass: Bool = false
+    private var fadeBottom: Bool = false
     private var cornerRadius: CGFloat = 0
 
     init(
@@ -55,6 +66,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             isDark = params["isDark"] as? Bool ?? false
             useGlass = params["useGlass"] as? Bool ?? false
             clearGlass = params["clearGlass"] as? Bool ?? false
+            fadeBottom = params["fadeBottom"] as? Bool ?? false
             if let radius = params["cornerRadius"] as? Double {
                 cornerRadius = CGFloat(radius)
             }
@@ -68,13 +80,25 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             // .regular = orta seffaflik (varsayilan, panel/buton vb.).
             let glass = UIGlassEffect(style: clearGlass ? .clear : .regular)
             glass.isInteractive = true
-            _blurView = UIVisualEffectView(effect: glass)
+            _blurView = FadingVisualEffectView(effect: glass)
         } else {
             let blurEffect = UIBlurEffect(style: blurStyle)
-            _blurView = UIVisualEffectView(effect: blurEffect)
+            _blurView = FadingVisualEffectView(effect: blurEffect)
         }
         _blurView.frame = frame
         _blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+        // Gradient fade: opak (ust) -> seffaf (alt). Maske DOGRUDAN effect
+        // view'a uygulanir (superview'a degil) ki blur sample edebilsin.
+        // Maske frame'i FadingVisualEffectView.layoutSubviews ile takip edilir.
+        if fadeBottom {
+            let gradient = CAGradientLayer()
+            gradient.colors = [UIColor.white.cgColor, UIColor.clear.cgColor]
+            gradient.startPoint = CGPoint(x: 0.5, y: 0.0)
+            gradient.endPoint = CGPoint(x: 0.5, y: 1.0)
+            gradient.frame = _blurView.bounds
+            _blurView.layer.mask = gradient
+        }
 
         // Glass shape: UIGlassEffect ignores layer.cornerRadius; the rounded
         // shape (and its edge lensing) must come from cornerConfiguration.

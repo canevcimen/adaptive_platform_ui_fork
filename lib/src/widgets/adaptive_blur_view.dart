@@ -16,6 +16,7 @@ class AdaptiveBlurView extends StatelessWidget {
     this.borderRadius,
     this.glass = false,
     this.clearGlass = false,
+    this.fadeBottom = false,
   });
 
   /// The widget to display on top of the blur effect
@@ -40,6 +41,11 @@ class AdaptiveBlurView extends StatelessWidget {
   /// `.regular` (medium transparency, default). No effect on iOS <26 / Android.
   final bool clearGlass;
 
+  /// When true on iOS 26+, applies a vertical gradient mask to the native effect
+  /// view so it fades from opaque (top) to transparent (bottom). No effect on
+  /// iOS <26 / Android (handle the fade with a Flutter ShaderMask there).
+  final bool fadeBottom;
+
   @override
   Widget build(BuildContext context) {
     // iOS 26+ uses native UIVisualEffectView
@@ -49,6 +55,7 @@ class AdaptiveBlurView extends StatelessWidget {
         borderRadius: borderRadius,
         glass: glass,
         clearGlass: clearGlass,
+        fadeBottom: fadeBottom,
         child: child,
       );
     }
@@ -288,6 +295,7 @@ class Ios26NativeBlurView extends StatefulWidget {
     this.borderRadius,
     this.glass = false,
     this.clearGlass = false,
+    this.fadeBottom = false,
   });
 
   final Widget child;
@@ -299,6 +307,10 @@ class Ios26NativeBlurView extends StatefulWidget {
 
   /// True -> UIGlassEffect.Style.clear (high transparency) instead of .regular.
   final bool clearGlass;
+
+  /// True -> vertical gradient mask on the native effect view (opaque top ->
+  /// transparent bottom).
+  final bool fadeBottom;
 
   @override
   State<Ios26NativeBlurView> createState() => Ios26NativeBlurViewState();
@@ -360,6 +372,7 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark,
               'useGlass': widget.glass,
               'clearGlass': widget.clearGlass,
+              'fadeBottom': widget.fadeBottom,
               'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
             },
             creationParamsCodec: const StandardMessageCodec(),
