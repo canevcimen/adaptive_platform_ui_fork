@@ -35,6 +35,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
     private var _viewId: Int64
     private var isDark: Bool = false
     private var useGlass: Bool = false
+    private var clearGlass: Bool = false
     private var cornerRadius: CGFloat = 0
 
     init(
@@ -53,6 +54,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             }
             isDark = params["isDark"] as? Bool ?? false
             useGlass = params["useGlass"] as? Bool ?? false
+            clearGlass = params["clearGlass"] as? Bool ?? false
             if let radius = params["cornerRadius"] as? Double {
                 cornerRadius = CGFloat(radius)
             }
@@ -62,7 +64,9 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
         // Liquid Glass (UIGlassEffect); otherwise fall back to the classic
         // frosted blur (UIBlurEffect), which also covers iOS < 26.
         if useGlass, #available(iOS 26.0, *) {
-            let glass = UIGlassEffect()
+            // .clear = yuksek seffaflik (medya/foto arka plan, or. feed),
+            // .regular = orta seffaflik (varsayilan, panel/buton vb.).
+            let glass = UIGlassEffect(style: clearGlass ? .clear : .regular)
             glass.isInteractive = true
             _blurView = UIVisualEffectView(effect: glass)
         } else {

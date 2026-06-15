@@ -15,6 +15,7 @@ class AdaptiveBlurView extends StatelessWidget {
     this.blurStyle = BlurStyle.systemUltraThinMaterial,
     this.borderRadius,
     this.glass = false,
+    this.clearGlass = false,
   });
 
   /// The widget to display on top of the blur effect
@@ -34,6 +35,11 @@ class AdaptiveBlurView extends StatelessWidget {
   /// On iOS <26 / Android this flag has no effect (Flutter fallback is used).
   final bool glass;
 
+  /// When true (and [glass] is true on iOS 26+), uses `UIGlassEffect.Style.clear`
+  /// (high transparency, for media-rich backgrounds like a feed) instead of
+  /// `.regular` (medium transparency, default). No effect on iOS <26 / Android.
+  final bool clearGlass;
+
   @override
   Widget build(BuildContext context) {
     // iOS 26+ uses native UIVisualEffectView
@@ -42,6 +48,7 @@ class AdaptiveBlurView extends StatelessWidget {
         blurStyle: blurStyle,
         borderRadius: borderRadius,
         glass: glass,
+        clearGlass: clearGlass,
         child: child,
       );
     }
@@ -280,6 +287,7 @@ class Ios26NativeBlurView extends StatefulWidget {
     required this.blurStyle,
     this.borderRadius,
     this.glass = false,
+    this.clearGlass = false,
   });
 
   final Widget child;
@@ -288,6 +296,9 @@ class Ios26NativeBlurView extends StatefulWidget {
 
   /// True -> native UIGlassEffect (real Liquid Glass), shape via cornerConfiguration.
   final bool glass;
+
+  /// True -> UIGlassEffect.Style.clear (high transparency) instead of .regular.
+  final bool clearGlass;
 
   @override
   State<Ios26NativeBlurView> createState() => Ios26NativeBlurViewState();
@@ -348,6 +359,7 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
               'isDark':
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark,
               'useGlass': widget.glass,
+              'clearGlass': widget.clearGlass,
               'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
             },
             creationParamsCodec: const StandardMessageCodec(),
