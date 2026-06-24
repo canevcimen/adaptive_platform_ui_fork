@@ -17,7 +17,10 @@ class AdaptiveBlurView extends StatelessWidget {
     this.glass = false,
     this.clearGlass = false,
     this.fadeBottom = false,
+    this.fadeBottomStart = 0.0,
+    this.progressiveBlur = false,
     this.tintColor,
+    this.frozen = false,
   });
 
   /// The widget to display on top of the blur effect
@@ -47,11 +50,27 @@ class AdaptiveBlurView extends StatelessWidget {
   /// iOS <26 / Android (handle the fade with a Flutter ShaderMask there).
   final bool fadeBottom;
 
+  /// Fraction of the height (0..1) that stays fully opaque before [fadeBottom]
+  /// starts fading. 0 = linear fade from the top (default). e.g. 0.8 = top 80%
+  /// solid, only the bottom edge softens (Instagram sheet-header look). iOS 26+.
+  final double fadeBottomStart;
+
+  /// When true on iOS 26+ (and not glass), renders a VARIABLE/progressive blur
+  /// (stacked masked blur layers) instead of a single blur — strong blur up top,
+  /// gradually ramping down over [fadeBottomStart]..1 (Instagram-style soft melt).
+  /// No effect on iOS <26 / Android or glass mode.
+  final bool progressiveBlur;
+
   /// Optional tint for the native `UIGlassEffect` (iOS 26+, when [glass] is true):
   /// colors the glass (stained-glass) while keeping the liquid effect. Use a
   /// color with alpha to control strength. No effect on iOS <26 / Android (tint
   /// the Flutter glass there via its own settings).
   final Color? tintColor;
+
+  /// When true on iOS 26+, freezes the native effect to a static snapshot and
+  /// stops the live blur recompute — used during route transitions to avoid
+  /// per-frame backdrop sampling jank. No effect on iOS <26 / Android.
+  final bool frozen;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +82,10 @@ class AdaptiveBlurView extends StatelessWidget {
         glass: glass,
         clearGlass: clearGlass,
         fadeBottom: fadeBottom,
+        fadeBottomStart: fadeBottomStart,
+        progressiveBlur: progressiveBlur,
         tintColor: tintColor,
+        frozen: frozen,
         child: child,
       );
     }
@@ -304,12 +326,17 @@ class Ios26NativeBlurView extends StatefulWidget {
     this.glass = false,
     this.clearGlass = false,
     this.fadeBottom = false,
+    this.fadeBottomStart = 0.0,
+    this.progressiveBlur = false,
     this.tintColor,
+    this.frozen = false,
   });
 
   final Widget child;
   final BlurStyle blurStyle;
   final BorderRadius? borderRadius;
+  final double fadeBottomStart;
+  final bool progressiveBlur;
 
   /// Native UIGlassEffect tint (stained glass), iOS 26+ when [glass] is true.
   final Color? tintColor;
@@ -324,6 +351,9 @@ class Ios26NativeBlurView extends StatefulWidget {
   /// transparent bottom).
   final bool fadeBottom;
 
+  /// True -> native effect frozen to a static snapshot (live blur paused).
+  final bool frozen;
+
   @override
   State<Ios26NativeBlurView> createState() => Ios26NativeBlurViewState();
 }
@@ -331,6 +361,7 @@ class Ios26NativeBlurView extends StatefulWidget {
 class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
   MethodChannel? _channel;
   bool? _lastIsDark;
+  bool? _lastFrozen;
 
   @override
   void didChangeDependencies() {
@@ -343,6 +374,24 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.blurStyle != widget.blurStyle && _channel != null) {
       _updateBlurStyle();
+    }
+    if (oldWidget.frozen != widget.frozen) {
+      _syncFrozenIfNeeded();
+    }
+  }
+
+  /// Native efekti dondur/coz (transition sirasinda snapshot). Kanal henuz
+  /// hazir degilse sessizce gecer; hazir olunca [onPlatformViewCreated] gonderir.
+  Future<void> _syncFrozenIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+    if (_lastFrozen != widget.frozen) {
+      try {
+        await ch.invokeMethod('setFrozen', {'frozen': widget.frozen});
+        _lastFrozen = widget.frozen;
+      } catch (e) {
+        // Platform view henuz hazir degilse yoksay.
+      }
     }
   }
 
@@ -385,6 +434,8 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
               'useGlass': widget.glass,
               'clearGlass': widget.clearGlass,
               'fadeBottom': widget.fadeBottom,
+              'fadeStart': widget.fadeBottomStart,
+              'progressiveBlur': widget.progressiveBlur,
               if (widget.tintColor != null)
                 'tintColor': _colorToArgb(widget.tintColor!),
               'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
@@ -394,6 +445,9 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
               _channel = MethodChannel(
                 'adaptive_platform_ui/ios26_blur_view_$id',
               );
+              // Kanal hazir: mevcut parlaklik + frozen durumunu gonder (initial).
+              _syncBrightnessIfNeeded();
+              _syncFrozenIfNeeded();
             },
           ),
         ),
