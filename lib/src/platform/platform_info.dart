@@ -27,13 +27,22 @@ class PlatformInfo {
   /// Returns true if running on web
   static bool get isWeb => kIsWeb;
 
+  /// Cached result of [iOSVersion] — the OS version cannot change while the
+  /// app is running, but this getter is called from hot paths (e.g. every
+  /// glass widget build, per frame during animations), so parsing the version
+  /// string with a RegExp each time is wasted work.
+  static int? _cachediOSVersion;
+
   /// Returns the iOS major version number
   ///
   /// Returns 0 if not running on iOS or if version cannot be determined.
   /// Example: For iOS 26.1.2, returns 26
   static int get iOSVersion {
     if (!isIOS) return 0;
+    return _cachediOSVersion ??= _parseIOSVersion();
+  }
 
+  static int _parseIOSVersion() {
     try {
       final version = Platform.operatingSystemVersion;
       // Extract major version from string like "Version 26.1.2 (Build 20A123)"
