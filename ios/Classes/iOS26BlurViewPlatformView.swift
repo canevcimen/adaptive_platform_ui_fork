@@ -142,6 +142,10 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
     private var fadeStart: Double = 0
     private var cornerRadius: CGFloat = 0
     private var tintArgb: Int?
+    // Interactive basma glow'u view.tintColor'i kullanir (UIKit default:
+    // systemBlue). Dart 'interactiveTintColor' ile ezilir (or. notr beyaz).
+    // tintArgb'den farkli: cami BOYAMAZ, yalniz dokunma parlamasini renklendirir.
+    private var interactiveTintArgb: Int?
 
     // Snapshot-freeze: route transition sirasinda canli blur'u durdurup o anki
     // gorunumun statik snapshot'ini gosterir (her kare backdrop ornekleme maliyeti
@@ -184,6 +188,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             fadeStart = params["fadeStart"] as? Double ?? 0
             progressiveBlur = params["progressiveBlur"] as? Bool ?? false
             tintArgb = params["tintColor"] as? Int
+            interactiveTintArgb = params["interactiveTintColor"] as? Int
             if let radius = params["cornerRadius"] as? Double {
                 cornerRadius = CGFloat(radius)
             }
@@ -205,6 +210,10 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
         } else {
             let blurEffect = UIBlurEffect(style: blurStyle)
             _blurView = FadingVisualEffectView(effect: blurEffect)
+        }
+        // Interactive glow rengi (yalniz glass modda anlamli; blur modda zararsiz).
+        if useGlass, let argb = interactiveTintArgb {
+            _blurView.tintColor = UIColor(argb: argb)
         }
         _blurView.frame = frame
         _blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]

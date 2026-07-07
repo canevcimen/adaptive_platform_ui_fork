@@ -20,6 +20,7 @@ class AdaptiveBlurView extends StatelessWidget {
     this.fadeBottomStart = 0.0,
     this.progressiveBlur = false,
     this.tintColor,
+    this.interactiveTintColor,
     this.frozen = false,
   });
 
@@ -67,6 +68,13 @@ class AdaptiveBlurView extends StatelessWidget {
   /// the Flutter glass there via its own settings).
   final Color? tintColor;
 
+  /// Color of the INTERACTIVE press glow (iOS 26+, when [glass] is true).
+  /// `UIGlassEffect.isInteractive` uses the view's `tintColor` for the touch
+  /// highlight; UIKit's default is systemBlue. Set this to override (e.g.
+  /// neutral white). Unlike [tintColor] it does NOT color the glass itself —
+  /// only the touch feedback. No effect on iOS <26 / Android.
+  final Color? interactiveTintColor;
+
   /// When true on iOS 26+, freezes the native effect to a static snapshot and
   /// stops the live blur recompute — used during route transitions to avoid
   /// per-frame backdrop sampling jank. No effect on iOS <26 / Android.
@@ -85,6 +93,7 @@ class AdaptiveBlurView extends StatelessWidget {
         fadeBottomStart: fadeBottomStart,
         progressiveBlur: progressiveBlur,
         tintColor: tintColor,
+        interactiveTintColor: interactiveTintColor,
         frozen: frozen,
         child: child,
       );
@@ -329,6 +338,7 @@ class Ios26NativeBlurView extends StatefulWidget {
     this.fadeBottomStart = 0.0,
     this.progressiveBlur = false,
     this.tintColor,
+    this.interactiveTintColor,
     this.frozen = false,
   });
 
@@ -340,6 +350,10 @@ class Ios26NativeBlurView extends StatefulWidget {
 
   /// Native UIGlassEffect tint (stained glass), iOS 26+ when [glass] is true.
   final Color? tintColor;
+
+  /// Interactive press-glow color (view tintColor); see
+  /// [AdaptiveBlurView.interactiveTintColor].
+  final Color? interactiveTintColor;
 
   /// True -> native UIGlassEffect (real Liquid Glass), shape via cornerConfiguration.
   final bool glass;
@@ -438,6 +452,9 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
               'progressiveBlur': widget.progressiveBlur,
               if (widget.tintColor != null)
                 'tintColor': _colorToArgb(widget.tintColor!),
+              if (widget.interactiveTintColor != null)
+                'interactiveTintColor':
+                    _colorToArgb(widget.interactiveTintColor!),
               'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
             },
             creationParamsCodec: const StandardMessageCodec(),
