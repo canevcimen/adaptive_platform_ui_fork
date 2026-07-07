@@ -145,7 +145,12 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
     // Interactive basma glow'u view.tintColor'i kullanir (UIKit default:
     // systemBlue). Dart 'interactiveTintColor' ile ezilir (or. notr beyaz).
     // tintArgb'den farkli: cami BOYAMAZ, yalniz dokunma parlamasini renklendirir.
+    // NOT: cihazda glow renginin tintColor'la ezilemedigi goruldu — rengi
+    // garanti kontrol icin 'interactiveGlass' ile kapatip feedback'i Flutter'a ver.
     private var interactiveTintArgb: Int?
+    // UIGlassEffect.isInteractive: sistemin dokunma shimmer/glow'u. false ->
+    // cam statik kalir, basma feedback'ini Flutter tarafi (InkWell) verir.
+    private var interactiveGlass: Bool = true
 
     // Snapshot-freeze: route transition sirasinda canli blur'u durdurup o anki
     // gorunumun statik snapshot'ini gosterir (her kare backdrop ornekleme maliyeti
@@ -189,6 +194,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             progressiveBlur = params["progressiveBlur"] as? Bool ?? false
             tintArgb = params["tintColor"] as? Int
             interactiveTintArgb = params["interactiveTintColor"] as? Int
+            interactiveGlass = params["interactiveGlass"] as? Bool ?? true
             if let radius = params["cornerRadius"] as? Double {
                 cornerRadius = CGFloat(radius)
             }
@@ -201,7 +207,7 @@ class iOS26BlurViewPlatformView: NSObject, FlutterPlatformView {
             // .clear = yuksek seffaflik (medya/foto arka plan, or. feed),
             // .regular = orta seffaflik (varsayilan, panel/buton vb.).
             let glass = UIGlassEffect(style: clearGlass ? .clear : .regular)
-            glass.isInteractive = true
+            glass.isInteractive = interactiveGlass
             // tintColor: cam'i renkli (stained glass) yapar — liquid efekt korunur.
             if let argb = tintArgb {
                 glass.tintColor = UIColor(argb: argb)

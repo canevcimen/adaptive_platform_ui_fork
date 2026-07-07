@@ -21,6 +21,7 @@ class AdaptiveBlurView extends StatelessWidget {
     this.progressiveBlur = false,
     this.tintColor,
     this.interactiveTintColor,
+    this.interactiveGlass = true,
     this.frozen = false,
   });
 
@@ -73,7 +74,19 @@ class AdaptiveBlurView extends StatelessWidget {
   /// highlight; UIKit's default is systemBlue. Set this to override (e.g.
   /// neutral white). Unlike [tintColor] it does NOT color the glass itself —
   /// only the touch feedback. No effect on iOS <26 / Android.
+  ///
+  /// NOT (cihazda doğrulandı): iOS 26'da glow rengi view.tintColor ile
+  /// EZİLEMEYEBİLİYOR (sistem mavisi kalıyor). Rengi garanti kontrol etmek
+  /// istiyorsan [interactiveGlass]'i kapatıp basma feedback'ini Flutter
+  /// tarafında ver.
   final Color? interactiveTintColor;
+
+  /// Whether the native glass reacts to touches with UIKit's own press
+  /// shimmer/glow (`UIGlassEffect.isInteractive`). Defaults to true (system
+  /// behaviour). Set false when the Flutter side provides its own press
+  /// feedback (e.g. InkWell) — avoids double feedback and the
+  /// uncontrollable system-blue glow. iOS 26+ glass mode only.
+  final bool interactiveGlass;
 
   /// When true on iOS 26+, freezes the native effect to a static snapshot and
   /// stops the live blur recompute — used during route transitions to avoid
@@ -94,6 +107,7 @@ class AdaptiveBlurView extends StatelessWidget {
         progressiveBlur: progressiveBlur,
         tintColor: tintColor,
         interactiveTintColor: interactiveTintColor,
+        interactiveGlass: interactiveGlass,
         frozen: frozen,
         child: child,
       );
@@ -339,6 +353,7 @@ class Ios26NativeBlurView extends StatefulWidget {
     this.progressiveBlur = false,
     this.tintColor,
     this.interactiveTintColor,
+    this.interactiveGlass = true,
     this.frozen = false,
   });
 
@@ -354,6 +369,9 @@ class Ios26NativeBlurView extends StatefulWidget {
   /// Interactive press-glow color (view tintColor); see
   /// [AdaptiveBlurView.interactiveTintColor].
   final Color? interactiveTintColor;
+
+  /// See [AdaptiveBlurView.interactiveGlass].
+  final bool interactiveGlass;
 
   /// True -> native UIGlassEffect (real Liquid Glass), shape via cornerConfiguration.
   final bool glass;
@@ -455,6 +473,7 @@ class Ios26NativeBlurViewState extends State<Ios26NativeBlurView> {
               if (widget.interactiveTintColor != null)
                 'interactiveTintColor':
                     _colorToArgb(widget.interactiveTintColor!),
+              'interactiveGlass': widget.interactiveGlass,
               'cornerRadius': widget.borderRadius?.topLeft.x ?? 0.0,
             },
             creationParamsCodec: const StandardMessageCodec(),
